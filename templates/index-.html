@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+  body { 
+    font-family: "avenir next", Arial, sans-serif;
+    font-size: 12px;
+    margin: 0;
+    background-image: url("https://w.wallha.com/ws/13/jyoSLNmF.jpg");
+    background-repeat: no-repeat;
+    background-size: cover; 
+    color: black;   
+  }
+  .header1 {
+    margin: 0px;
+    text-align: center;
+    font-size: 20px;
+    color: white
+  }
+  .header2 {
+    margin: 0px;
+    text-align: center;
+    font-size: 20px;
+    color: black
+  }
+  .split {
+  height: 100%;
+  width: 50%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  overflow-x: hidden;
+  padding-top: 20px;
+}
+
+/* Control the left side */
+.left {
+  left: 0;
+  background-image: url("https://cdna.artstation.com/p/assets/images/images/012/198/494/large/kristian-akerstrom-analytics-dashboard-overview.jpg?1533572173");
+  background-repeat: no-repeat;
+  background-size: cover; 
+  color: black;
+}
+
+/* Control the right side */
+.right {
+  right: 0;
+  // background-color: red;
+  background-image: url("https://variety.com/wp-content/uploads/2018/07/league-of-legends-2015-05-15-18-05-46-91.png");
+  background-repeat: no-repeat;
+  background-size: cover; 
+  color: black;
+}
+
+/*To center content horizontally and vertically for either side */
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* To style the image inside the centered container */
+.centered img {
+  width: 150px;
+  border-radius: 50%;
+}
+
+/* Style the button for submitting match id */
+.button1 {
+  background-color: violet; 
+  width: 60px;
+  height: 30px;
+  color: black; 
+  border: 1px solid blue;
+  border-radius: 12px;
+}
+
+/* Change button color and shadow when mouse hovers over it */
+.button1:hover {
+  background-color: #00308F;
+  color: white;
+  box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+}
+
+/* Add box shadow and movement when button clicked */
+.button1:active {
+  background-color: #00308F;
+  box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+  transform: translateY(4px);
+}
+
+/* Style the button for live match */
+.button2 {
+  background-color: orange; 
+  width: 60px;
+  height: 30px;
+  color: black; 
+  border: 1px solid red;
+  border-radius: 12px;
+}
+
+/* Change button color and shadow when mouse hovers over it */
+.button2:hover {
+  background-color: red;
+  color: white;
+  box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+}
+
+/* Add box shadow and movement when button clicked */
+.button2:active {
+  background-color: red;
+  box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+  transform: translateY(4px);
+}
+</style>
+<body>
+<script src="http://code.jquery.com/jquery.min.js"></script>
+<div class="split left">
+  <div class="centered">
+    <img src="https://www.shutterstock.com/image-vector/merger-acquisition-due-diligence-concept-260nw-1669864237.jpg" alt="Avatar woman">
+    <h2 class="header1">Recorded Matches</h2>
+    <input type="text" id="id" name="id"><br>
+    <button class = "button button1" id="idButton">Submit</button><br>
+  </div>
+</div>
+
+<div class="split right">
+  <div class="centered">
+    <img src="https://static.vecteezy.com/system/resources/previews/005/260/719/original/live-stream-live-icon-live-streaming-icon-symbol-free-vector.jpg" alt="Avatar man">
+    <h2 class="header2">Live Evaluation</h2>
+    <button class = "button button2" id="LiveButton">Next</button><br>
+  </div>
+</div>
+
+<script>
+
+/* Check if the id-button is clicked, and post data entered in the id 
+text input to the server.py flask app python code. Also change href to the
+index_matchid.html webpage*/
+
+document.getElementById("idButton").onclick = function () {
+        data = document.getElementById("id").value
+        console.log(data)
+        $.post( "/postmethod", {
+            javascript_data: data 
+        });
+        location.href = "/index_matchid";
+    };
+
+/* Check if the Live button is clicked, and change href to the index_live.html webpage*/
+
+document.getElementById("LiveButton").onclick = function () {
+        location.href = "/index_live";
+    };
+</script>
+</body>
+</html>

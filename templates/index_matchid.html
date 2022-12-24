@@ -1,0 +1,821 @@
+
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src='https://d3js.org/d3.v5.min.js'></script>
+  <style>
+    body { 
+      font-family: "avenir next", Arial, sans-serif;
+      font-size: 12px;
+      margin: 0;
+      background-image: url("https://w.wallha.com/ws/13/jyoSLNmF.jpg");
+      background-repeat: no-repeat;
+      background-size: cover; 
+      color: black;   
+    }
+    .subheader {
+      margin: 0px;
+      text-align: center;
+      font-size: 10px;
+    }
+    
+    .header {
+      margin: 0px;
+      text-align: center;
+      font-size: 25px;
+    }
+    
+    /* Style the prediction odds bar */
+    .odds {
+      margin: 50px auto;
+      padding: 0px;
+      width: 100%;
+      max-width: 500px;
+      background: red;
+      border: 1px solid #000;
+      border-radius: 5px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .odds .odds__bar {
+      height: 100%;
+      width: 0;
+      border-radius: 4px;
+      background: blue;
+      transition: 0.3s;
+    }
+    
+    /* Style the timestamp slider*/
+    .slidecontainer {
+      width: 40%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 10px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.5;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+    
+    /* Change slider opacity if pointer over bar */
+    .slider:hover {
+      opacity: 1;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      background: url('http://www.rw-designer.com/icon-image/21516-32x32x32.png');
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+      background: url('http://www.rw-designer.com/icon-image/21516-32x32x32.png');
+    }
+
+    .centered {
+      position: absolute;
+      top: 17%;
+      left: 57%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    
+    /* Style the button for next time frame */
+    .button1 {
+      background-color: #6495ED; 
+      width: 50px;
+      height: 30px;
+      color: black; 
+      border: 1px solid blue;
+      border-radius: 12px;
+    }
+    
+    /* Change button color and shadow when mouse hovers over it */
+    .button1:hover {
+      background-color: #00308F;
+      color: white;
+      box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+    }
+    
+    /* Add box shadow and movement when button clicked */
+    .button1:active {
+      background-color: #00308F;
+      box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+      transform: translateY(4px);
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>LoL Game Predictor</h1>
+</div>
+
+<!-- Show game time from the selected slider timestamp or frame from button -->
+<div class=" subheader">
+  <h1>Game Time (min): <span id="showtime"></span></h1>
+</div>
+
+<div class=" subheader">
+  <h1>Next Frame (4 mins): </h1>
+</div>
+<div class="centered">
+<button class = "button button1" id="Button">Next</button><br>
+</div>
+<div class="slidecontainer">
+  <input type="range" min="1" max="29" value="1" class="slider" id="time">
+</div>
+
+<div class="subheader">
+  <h1>Odds of Winning team</h1>
+</div>
+
+<div id = 'vis'></div>
+
+<div class="odds"> 
+  <div id="download" class="odds__bar"></div>
+</div>
+<script>
+// Receive data from server.py using jinja
+var both_data = {{ lst|tojson }}
+for (let i = 0; i < both_data.length; i++) {
+  if(i==0){var data = both_data[i]}
+  else{var bubble_raw = both_data[i]}
+}
+
+console.log(data)
+
+//reformat raw bubble chart data to appropriate format
+
+var headers = ['val','id','groupid','size'];
+var bubble = [];
+var bubble_raw_dict = {};
+for (let i = 0; i < bubble_raw.length; i++) {
+  for (let j = 0; j < bubble_raw[i].length; j++) {
+  bubble_raw_dict[headers[j]] = bubble_raw[i][j].toString();
+  }
+  bubble.push(bubble_raw_dict)
+  bubble_raw_dict = {};
+}
+bubble.columns = headers
+
+// goldlineGraph function creates a new svg element for gold difference taken from data and plots line graph
+function goldlineGraph(selected_val)
+{
+    var margin = {top: 20, right: 50, bottom: 50, left: 60},
+        width = 460 - margin.left - margin.right,
+        height = 460 - margin.top - margin.bottom;
+    width = width - 50
+    height = height - 50
+    
+    var svg2 = d3.select("#vis")
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .style("position","fixed")
+        .style("top","40%")
+        .style("left","10%")
+        .style('background', 'white')
+      .append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+    // Get golddiff from data
+    data[3] = Object.values(data[3])
+    var golddiff = data[3].slice(0, selected_val);
+    
+    // Get max and min values for scaling line graph
+    min = Math.min(...golddiff)
+    max = Math.max(...golddiff)
+     
+    // reformat data to appropriate format for line graph
+    var arr = [];
+    var temp_arr = [];
+    var count = 1;
+    for (let x in golddiff) {
+        temp_arr.push(count);
+        temp_arr.push(golddiff[x]);
+        arr.push(temp_arr);
+        temp_arr = [];
+        count += 1;
+    }
+    
+    // Define color scale for line graph
+    var myColor = d3.scaleOrdinal(d3.schemeSet3);
+    
+    // Define x and y scales for line graph
+    var xScale = d3.scaleLinear().domain([0, golddiff.length]).range([0, width]),
+            yScale = d3.scaleLinear().domain([min, max]).range([height, 0]);
+    
+
+    svg2.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(xScale));
+        
+    svg2.append("g")
+         .call(d3.axisLeft(yScale));
+    
+    svg2.append("path")
+        .attr("d","M-40,-19 h"+370+" a20,20 0 0 1 20,20 v"+370+" a20,20 0 0 1 -20,20 h-"+370+" a20,20 0 0 1 -20,-20 v-"+370+" a20,20 0 0 1 20,-20 z")
+        .attr("stroke", "#002D62")
+        .attr("fill", "none")
+        .attr("stroke-width","15");
+    
+    // Use random color for path in line graph. Also display with appropriate data for graph
+    path = svg2.append("path")
+        .datum(arr) 
+        .attr("fill", "none")
+        .attr("stroke", function() {
+          return d3.rgb(Math.random() * 255, Math.random() * 255, Math.random() * 255);
+        })        
+        .attr("stroke-width", 5)
+        .attr("d", d3.line()
+                    .x(function(d) { return xScale(d[0]); }) 
+                    .y(function(d) { return yScale(d[1]); })
+                    );
+    // Get path length for drawing animation
+    const pathLength = path.node().getTotalLength();
+    console.log("pathLength:",pathLength)
+    
+    //Add a 0.9 second delay transition everytime line graph is drawn to make changes in graph feel more smooth
+    const transitionPath = d3
+      .transition()
+      .ease(d3.easeSin)
+      .duration(900);
+    
+    // Define attributes for drawing transition in path
+    path
+      .attr("stroke-dashoffset", pathLength)
+      .attr("stroke-dasharray", pathLength)
+      .transition(transitionPath)
+      .attr("stroke-dashoffset", 0);
+      
+    // Add text to x-axis and style appropriately
+    svg2.append("text")
+	  .attr("x", width / 2)
+	  .attr("y", height + 35)
+	  .attr("text-anchor", "middle")
+	  .style("font-size", "18px")
+	  .style("max-width", 400)
+	  .text("Time(mins)");
+   
+   // Add text to y-axis and style appropriately
+   svg2.append("g")
+      .attr('transform', 'translate(' + -35 + ', ' + height / 2 + ')')
+      .append("text")
+	  .attr("text-anchor", "middle")
+	  .style("font-size", "18px")
+	  .style("max-width", 400)
+      .attr("transform", "rotate(-90)")
+	  .text("Gold Difference");
+}
+
+// killlineGraph function creates a new svg element for kill difference taken from data and plots line graph
+function killlineGraph(selected_val)
+{
+    var margin = {top: 20, right: 50, bottom: 50, left: 60},
+        width = 460 - margin.left - margin.right,
+        height = 460 - margin.top - margin.bottom;
+    width = width - 50
+    height = height - 50
+    
+    var svg3 = d3.select("#vis")
+      .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .style("position","fixed")
+        .style("top","40%")
+        .style("left","68%")
+        .style('background', 'white')
+      .append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.top + ")");
+              
+    // Get killdiff from data
+    data[8] = Object.values(data[8])
+    var killdiff = data[8].slice(0, selected_val);
+    console.log(killdiff)
+    
+    // Get max and min values for scaling line graph
+    min = Math.min(...killdiff)
+    max = Math.max(...killdiff)
+    console.log(min)
+    console.log(max)
+     
+    // reformat data to appropriate format for line graph
+    var arr = [];
+    var temp_arr = [];
+    var count = 1;
+    for (let x in killdiff) {
+        temp_arr.push(count);
+        temp_arr.push(killdiff[x]);
+        arr.push(temp_arr);
+        temp_arr = [];
+        count += 1;
+    }
+    console.log('Finally')
+    console.log(arr)
+    
+    // Define color scale for line graph
+    var myColor = d3.scaleOrdinal(d3.schemeSet3);
+
+    // Define x and y scales for line graph
+    var xScale = d3.scaleLinear().domain([0, killdiff.length]).range([0, width]),
+            yScale = d3.scaleLinear().domain([min, max]).range([height, 0]);
+    
+    // Append path to make the graphs look curved at the edges and style
+    svg3.append("path")
+        .attr("d","M-40,-19 h"+370+" a20,20 0 0 1 20,20 v"+370+" a20,20 0 0 1 -20,20 h-"+370+" a20,20 0 0 1 -20,-20 v-"+370+" a20,20 0 0 1 20,-20 z")
+        .attr("stroke", "#002D62")
+        .attr("fill", "none")
+        .attr("stroke-width","15");
+        
+    svg3.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(xScale));
+        
+    svg3.append("g")
+         .call(d3.axisLeft(yScale));
+    
+    // Use random color for path in line graph. Also display with appropriate data for graph
+    path = svg3.append("path")
+        .datum(arr) 
+        .attr("fill", "none")
+        .attr("stroke", function() {
+          return d3.rgb(Math.random() * 255, Math.random() * 255, Math.random() * 255);
+        })
+        .attr("stroke-width", 5)
+        .attr("d", d3.line()
+                    .x(function(d) { return xScale(d[0]); }) 
+                    .y(function(d) { return yScale(d[1]); })
+                    );
+    
+    // Get path length for drawing animation
+    const pathLength = path.node().getTotalLength();
+    
+    //Add a 0.9 second delay transition everytime line graph is drawn to make changes in graph feel more smooth
+    const transitionPath = d3
+      .transition()
+      .ease(d3.easeSin)
+      .duration(900);
+    
+    // Define attributes for drawing transition in path
+    path
+      .attr("stroke-dashoffset", pathLength)
+      .attr("stroke-dasharray", pathLength)
+      .transition(transitionPath)
+      .attr("stroke-dashoffset", 0);
+    
+    // Add text to x-axis and style appropriately
+    svg3.append("text")
+	  .attr("x", width / 2)
+	  .attr("y", height + 35)
+	  .attr("text-anchor", "middle")
+	  .style("font-size", "18px")
+	  .style("max-width", 400)
+	  .text("Time(mins)");
+   
+   // Add text to y-axis and style appropriately
+   svg3.append("g")
+      .attr('transform', 'translate(' + -35 + ', ' + height / 2 + ')')
+      .append("text")
+	  .attr("text-anchor", "middle")
+	  .style("font-size", "18px")
+	  .style("max-width", 400)
+      .attr("transform", "rotate(-90)")
+	  .text("Kill Difference");
+}
+
+// Function to update the predicted odds bar in code
+function odds(selected_val)
+{
+    // Access the preogress bar as a variable
+    let progressbar = document.getElementById("download");
+
+    // Function that updates progress bar based on value of blue team winning
+    function updateProgressBar(value) {
+      if (value >= 0 && value <= 100) {
+        progressbar.style.width = value + "%"; 
+      }
+    }
+
+    // Function that maes sure value is correct and does not exceed values before updating bar
+    function handleInput(value) {
+      if (value > 100) {
+        value = 100;
+        document.getElementById('set-value').value = 100;
+      }
+      if (value < 0) {
+        value = 0;
+        document.getElementById('set-value').value = 0;
+      }
+      
+      updateProgressBar(value);
+    }
+    // Call function to update bar based on prediction of blue team winning from deep learning model
+    handleInput(Math.round(data[1][selected_val]));
+}
+
+// Function to instantiate new bubble chart given a DOM element to display it in and a dataset to visualise
+function bubbleChart(selected_val) {
+  const width = 940;
+  const height = 500;
+
+  // location to centre the bubbles
+  const centre = { x: width/2, y: height/2 };
+
+  // strength to apply to the position forces
+  const forceStrength = 0.05;
+
+  // these will be set in createNodes and chart functions
+  let svg = null;
+  let bubbles = null;
+  let labels = null;
+  let nodes = [];
+
+  // charge is dependent on size of the bubble, so bigger towards the middle
+  function charge(d) {
+    return Math.pow(d.radius, 2.0) * 0.01
+  }
+  
+  //Define forceX and forceY based on team of bubble
+  
+  var forceX = d3.forceX(function(d){
+      if(d.groupid == 1){
+          return width/2
+      }
+      if(d.groupid == 2){
+          return width/7
+      }
+  }).strength(forceStrength)
+  
+  var forceY = d3.forceY(function(d){
+      if(d.groupid == 1){
+          return height/5.2
+      }
+      if(d.groupid == 2){
+          return height/1.25
+      }
+  }).strength(forceStrength)
+  
+  // create a force simulation and add forces to it
+  const simulation = d3.forceSimulation()
+    .force('charge', d3.forceManyBody().strength(charge))
+    .force('x', forceX)
+    .force('y', forceY)
+    .force('collision', d3.forceCollide().radius(d => d.radius + 1));
+
+  // force simulation starts up automatically, which we don't want as there aren't any nodes yet
+  simulation.stop();
+
+  // set up colour scale
+  const fillColour = d3.scaleOrdinal()
+  	.domain(["1", "2", "3", "5", "99"])
+  	.range(["#FF0000","#0000FF"]);
+
+  // data manipulation function takes raw data and converts it into an array of node objects
+  // each node will store data and visualisation values to draw a bubble
+  // rawData is expected to be an array of data objects
+  // function returns the new node array, with a node for each element in the rawData input
+  
+  function createNodes(rawData) {
+    // use max size in the data as the max in the scale's domain
+    const maxSize = d3.max(rawData, d => +d.size);
+
+    // size bubbles based on area
+    const radiusScale = d3.scaleSqrt()
+      .domain([0, maxSize])
+      .range([0, 20]) //change for size
+
+    // use map() to convert raw data into node data
+    const myNodes = rawData.map(d => ({
+      ...d,
+      radius: radiusScale(+d.size),
+      size: +d.size,
+      x: Math.random() * 900,
+      y: Math.random() * 800
+    }))
+
+    return myNodes;
+  }
+
+  // main entry point to bubble chart, returned by parent closure
+  // prepares rawData for visualisation and adds an svg element to the provided selector and starts the visualisation process
+  let chart = function chart(selector, rawData) {
+    // convert raw data into nodes data
+    
+    //Convert rawdata into usable format for chosen time and save as newData
+    newData = [];
+    for (const property in rawData) {
+          console.log(`${property}: ${rawData[property]}`);
+          for (const raw_property in rawData[property]) {
+              if(raw_property=='val'){
+                  if(rawData[property][raw_property] == selected_val){
+                  newData.push({id:rawData[property]['id'], groupid:rawData[property]['groupid'], size:rawData[property]['size']})
+              }
+              }
+              }
+          }
+    console.log(newData);
+    
+    nodes = createNodes(newData);
+
+    // create svg element inside provided selector
+    // Manually set positions to appropriate position using position fixed and style svg
+    svg = d3.select(selector)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .style("position","fixed")
+      .style("top","40%")
+      .style("left","35%")
+      .style('background', 'url("https://www.mobafire.com/images/ward-map/map-full-dimmed-opt.jpg") no-repeat')
+      .style('background-size', '60% 100%');
+
+    //1->Red, 2->Blue Map->map
+    
+    //Defining def along with patterns for adding images to each bubble in bubble chart
+    
+    var defs = svg.append("defs");
+    
+    defs.append("pattern")
+      .attr("id", "map")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",height)
+      .attr("width",width)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://lolfanatics.com/wp-content/uploads/2022/04/League-of-Legends-Locations-Map-Guide.jpg")
+    
+    defs.append("pattern")
+      .attr("id", "1-1")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://images.saymedia-content.com/.image/t_share/MTc0NDUyOTIzMTEwMDA4MTY4/league-of-legends-dragon-drake-control.png")
+    
+    defs.append("pattern")
+      .attr("id", "1-2")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://www.gamersdecide.com/sites/default/files/authors/u157431/cloud.jpg")
+    
+    defs.append("pattern")
+      .attr("id", "2-1")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://i.ytimg.com/vi/5qYyhE5SmEc/maxresdefault.jpg")
+    
+    defs.append("pattern")
+      .attr("id", "2-2")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://www.lolporadnik.pl/wp-content/uploads/2020/11/baron-300x293.jpg")
+      
+    defs.append("pattern")
+      .attr("id", "3-1")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://external-preview.redd.it/sO1hOP1ZxscEnIemG5ZQxGp8ZNW-riPi-VextK42YqU.jpg?auto=webp&s=d39aa960e10e4185752423746bd5b4a31c330a79")
+    
+    defs.append("pattern")
+      .attr("id", "3-2")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://images2.minutemediacdn.com/image/fetch/w_736,h_485,c_fill,g_auto,f_auto/https%3A%2F%2Fblogoflegends.com%2Ffiles%2F2016%2F04%2Frh-850x493.jpg")
+      
+    defs.append("pattern")
+      .attr("id", "4-1")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://images2.minutemediacdn.com/image/upload/c_fill,w_1200,h_630,f_auto,q_auto,g_auto/shape/cover/sport/5ae8b25f63c941ab9c000003.jpeg")//Old version. Update it
+    
+    defs.append("pattern")
+      .attr("id", "4-2")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://noobabble.files.wordpress.com/2014/06/blue-tower.jpg")
+      
+    defs.append("pattern")
+      .attr("id", "5-1")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://www.lolfinity.com/wp-content/uploads/2018/04/Red_Inhibitor.png")
+    
+    defs.append("pattern")
+      .attr("id", "5-2")
+      .attr("height", "100%")
+      .attr("width", "100%")
+      .attr("patternContentUnits", "objectBoundingBox")
+      .append("image")
+      .attr("height",1)
+      .attr("width",1)
+      .attr("preserveAspectRatio","none")
+      .attr("xmlns:xlink","http://www.w3.org/1999/xlink")
+      .attr("xlink:href","https://images2.minutemediacdn.com/image/fetch/w_2000,h_2000,c_fit/https%3A%2F%2Fblogoflegends.com%2Ffiles%2F2016%2F11%2Fnpg-inhibitor.jpg")//Old version. Update it
+    
+
+    // bind nodes data to circle elements
+    const elements = svg.selectAll('.bubble')
+      .data(nodes, d => d.id)
+      .enter()
+      .append('g');
+
+    //Note that fill changes based on id and groupid to show appropriate image for each bubble
+    bubbles = elements
+      .append('circle')
+      .classed('bubble', true)
+      .attr('r', d => d.radius)
+      .attr('fill', d => "url(#" + d.id + "-"+ d.groupid + ")")
+    
+    // labels
+    labels = elements
+      .append('text')
+      .attr('dy', '.3em')
+      .style('text-anchor', 'middle')
+      .style('font-size', 2)
+      .style('color', function(d) {if(d.groupid == 1) {return "blue";} else {return "red";}})
+      .text(d => d.groupid)
+
+    // set simulation's nodes to our newly created nodes array
+    // simulation starts running automatically once nodes are set
+    simulation.nodes(nodes)
+      .on('tick', ticked)
+      .restart();
+  }
+
+  // callback function called after every tick of the force simulation
+  // here we do the actual repositioning of the circles based on current x and y value of their bound node data
+  // x and y values are modified by the force simulation
+  function ticked() {
+    bubbles
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y)
+
+    labels
+      .attr('x', d => d.x)
+      .attr('y', d => d.y)
+  }
+
+  // return chart function from closure
+  return chart;
+}
+
+// new bubble chart instance with initial selected value
+var selected_val = 1;
+let myBubbleChart = bubbleChart(selected_val);
+
+// function called once promise is resolved and data is sent to html file
+// calls bubble chart function to display inside #vis div
+function display(data) {
+  myBubbleChart('#vis', data);
+}
+
+// Function used for clearning svg elements from specific div everytime new timestamp is selected
+function clear(selector){
+    d3.select(selector)
+      .selectAll('svg')
+      .remove()
+}
+
+// Get values from slider and display in output 
+var slider = document.getElementById("time");
+  var output = document.getElementById("showtime");
+  output.innerHTML = slider.value;
+
+// Function to display new bubble chart, line graph and update odds bar
+function run(i){
+    slider.value = i;
+    output.innerHTML = slider.value;
+    console.log(slider.value)
+    selected_val = slider.value
+    myBubbleChart = bubbleChart(selected_val);
+    odds(selected_val)
+    display(bubble)
+    goldlineGraph(selected_val)
+    killlineGraph(selected_val)
+    }
+
+// Everytime slider value changes, display new bubble chart, line graph and update odds bar
+  slider.oninput = function() {
+    output.innerHTML = this.value;
+    console.log(this.value)
+    selected_val = this.value
+    s = parseInt(selected_val)+1;
+    e = s + 4;
+    console.log('Refs:',s,e)
+    myBubbleChart = bubbleChart(selected_val);
+    odds(selected_val)
+    display(bubble)
+    goldlineGraph(selected_val)
+    killlineGraph(selected_val)
+    }
+
+// Initialization
+display(bubble)
+
+// Define sleep for javascript using promise
+var sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+
+// Function that will call 'run' from start index to end index with a 1 sec delay
+const repeated = async (s,e) => {
+
+for (let i = s; i < e; i++) {
+    await sleep (1000);
+    run(i)
+ }
+}
+
+// Define initial start and end indices 
+var s = 1;
+var e = 5;
+// Call function for first 4 frames
+repeated(s,e);
+
+// Update indices
+s = e;
+e = e+4;
+
+// Call this function everytime Next button in clicked
+document.getElementById("Button").onclick = function () {
+        if(e>30){e = 30;}
+        if(s>29){s = 29;}
+        
+        // Update to next 4 frames with delay and show
+        repeated(s,e);
+        s = e;
+        e = e+4;
+        if(e>30){e = 30;}
+    };
+
+</script>
+</body>
